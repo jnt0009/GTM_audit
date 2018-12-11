@@ -1,0 +1,47 @@
+library(googleAuthR)
+library(shiny)
+library(googleTagManageR)
+library(shinythemes)
+
+ui <- fluidPage(
+  theme = shinytheme(theme = 'journal'),
+  titlePanel("GTM Container Auditor"),
+  
+  sidebarLayout(
+    sidebarPanel(
+      selectInput('functions','Choose function',
+                   choices = "Viewer",
+                  ##list('Viewer','Multi Download','Audit') one day all of these will work
+                   selected = NULL
+                   
+      ),
+      googleAuthUI("loginButton"),
+      tags$br(),
+      uiOutput("accounts"),
+      tags$br(),
+      uiOutput("containers"),
+      tags$br(),
+      radioButtons('rb','Choose One',
+                   choices = list('Tags','Tags + Code','Triggers','Variables','Full (Could take a while)'),
+                   selected = 'Tags'
+        
+      ),
+      tags$br(),
+      actionButton("step3","List Tags"),
+      downloadLink('downloadData', 'Download')
+    ),
+    mainPanel(
+      tags$div(id = 'instruction',
+        tags$ul(
+          tags$li("Step1: Authenticate Via Google:"),
+          tags$li("Step2: Select an account"),
+          tags$li("Step3: Select a Container"),
+          tags$li("Step4: List either Tags, Triggers, or Both")
+          )
+      ),
+      dataTableOutput("taglist")
+    )
+  )
+)
+
+
