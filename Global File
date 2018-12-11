@@ -1,0 +1,24 @@
+
+# Load the libraries
+library(googleAuthR)
+library(shiny)
+library(googleTagManageR)
+
+# Get the client ID and client secret from .Renviron rather than hardcoding them
+## Turn this into a list of credentials.  Then set the random number to grab anyone
+client_id <- <> ## insert client ID
+client_secret <- <> ## insert client secret
+scaler <- floor(runif(1, min=1, max=5))  
+# Set the options for googleAuthR
+options(googleAuthR.scopes.selected = "https://www.googleapis.com/auth/tagmanager.readonly")
+options(googleAuthR.webapp.client_id = client_id)
+options(googleAuthR.webapp.client_secret = client_secret)
+
+# The function to actually get the account list. This could possibly live
+# in server.R
+get_accounts <- function(){
+  
+  accounts_list <- gtm_accounts_list()
+  
+}
+
