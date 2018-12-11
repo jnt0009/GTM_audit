@@ -1,0 +1,173 @@
+{
+                    ## Functions ##    
+  ## Create access token and render login button
+  access_token <- callModule(googleAuth,"loginButton")  ## gets token 
+  account_list <- reactive(with_shiny(get_accounts, shiny_access_token = access_token())) ## lists accounts 
+  container_list <- reactive({
+    container_list <- Sys.setenv(GA_AUTH_FILE = access_token())
+    gar_auth(token = access_token())
+    print(input$Accounts)
+    x = (which(input$Accounts == account_list()[2]))
+    y = account_list()[x,1]
+    print(y)
+    containers = gtm_containers_list(y)  
+    containers[,3]
+  }) ## lists containers
+  Tag_list <- eventReactive(input$step3,{
+    Sys.setenv(GA_AUTH_FILE = access_token())
+    gar_auth(token = access_token())
+    #print(input$container_groups)
+    print(input$rb)
+    x = (which(input$Accounts == account_list()[2])) #position of account selector
+    y = account_list()[x,1] # account ID
+    containers = gtm_containers_list(y) # container list
+    #print(containers)
+    w = (which(input$Containers == containers[3])) ##position of container selector
+    v = gtm_tags_list(accountId = containers[w,1], containerId = containers[w,2]) # tag list
+    ## Tags Went here
+    s = gtm_triggers_list(accountId = containers[w,1], containerId = containers[w,2]) # trigger list
+    ## Triggers here
+    r = gtm_variables_list(accountId = containers[w,1], containerId = containers[w,2])## Vars    ##print(u)
+    if(input$rb == "Tags"){
+      as.data.frame(v[,3:5])
+    }
+    else if(input$rb == "Tags + Code") {
+      tag_code = list()
+      for(i in 1:nrow(v)){
+        if(i%%25 == 0){
+          Sys.sleep(5)
+          print('sleep')
+        }
+        if(v[i,5] == "ua"){ ## tests for type
+          code = gtm_tag(accountId = containers[w,1], containerId = containers[w,2],v[i,3])
+          code_a = code[,-c(1,4)] ##
+          eventCategoryPos = grep("eventCategory",code_a[,1]) ## EC position
+          eventActionPos = grep("eventAction",code_a[,1]) ## EA position
+          eventLabelPos = grep("eventLabel",code_a[,1])  ## EL position
+          taxonomy = code_a[c(eventCategoryPos,eventActionPos,eventLabelPos),] ## full taxonomy
+          taxonomy = toString(c(t(taxonomy))) ## strings taxonomy
+          tag_code[i] = taxonomy
+        } else if(v[i,5] == "awct" ){
+          code = gtm_tag(accountId = containers[w,1], containerId = containers[w,2],v[i,3])
+          code_a = code[,-c(1)] ##
+          conversionIdPos = grep("conversionId",code_a[,1]) ## EC position
+          conversionLabelPos = grep("conversionLabel",code_a[,1]) ## EA position
+          taxonomy = code_a[c(conversionIdPos,conversionLabelPos),] ## full taxonomy
+          taxonomy = toString(c(t(taxonomy))) ## strings taxonomy
+          tag_code[i] = taxonomy
+        }   else {
+          code = gtm_tag(accountId = containers[w,1], containerId = containers[w,2],v[i,3])
+          code_a = code[,-c(1)]  ## drops useless rows
+          taxonomy = code_a
+          taxonomy = toString(c(t(taxonomy)))
+          tag_code[i] = taxonomy
+        }}  ## Add DCM src type CAT
+      tag_code = as.data.frame(tag_code)
+      tag_code = t(tag_code)
+      v = cbind(v,tag_code)
+      v = v[,-c(1:3)]
+      v = sapply(v,FUN = as.character)
+      as.data.frame(v)
+    } else if (input$rb == "Triggers") {
+      s = as.data.frame(s)
+      triggerName = unlist(s$triggers.name) ## trigger names
+      triggerType = unlist(s$triggers.type) ## trigger type
+      firingTriggerId = unlist(s$triggers.triggerId) # trigger ID
+      s = cbind(triggerName,triggerType) ## binds them together
+      s = cbind(s,firingTriggerId) ## binds them together
+      as.data.frame(s)
+    } else if(input$rb == "Variables"){
+      #r = r[,c(3,4)]
+      r = as.data.frame(r)
+      r[,3:5]
+    } else if (input$rb == "Full (Could take a while)") {
+      print('Started') ##Debugg
+      tag_code = list()
+      for(i in 1:nrow(v)){
+        if(i%%25 == 0){
+          Sys.sleep(5)
+          print('sleep')
+        } 
+        if(v[i,5] == "ua"){ ## tests for type
+          code = gtm_tag(accountId = containers[w,1], containerId = containers[w,2],v[i,3])
+          code_a = code[,-c(1,4)] ##
+          eventCategoryPos = grep("eventCategory",code_a[,1]) ## EC position
+          eventActionPos = grep("eventAction",code_a[,1]) ## EA position
+          eventLabelPos = grep("eventLabel",code_a[,1])  ## EL position
+          taxonomy = code_a[c(eventCategoryPos,eventActionPos,eventLabelPos),] ## full taxonomy
+          taxonomy = toString(c(t(taxonomy))) ## strings taxonomy
+          tag_code[i] = taxonomy
+        } else if(v[i,5] == "awct" ){
+          code = gtm_tag(accountId = containers[w,1], containerId = containers[w,2],v[i,3])
+          code_a = code[,-c(1)] ##
+          conversionIdPos = grep("conversionId",code_a[,1]) ## EC position
+          conversionLabelPos = grep("conversionLabel",code_a[,1]) ## EA position
+          taxonomy = code_a[c(conversionIdPos,conversionLabelPos),] ## full taxonomy
+          taxonomy = toString(c(t(taxonomy))) ## strings taxonomy
+          tag_code[i] = taxonomy
+        }   else {
+          code = gtm_tag(accountId = containers[w,1], containerId = containers[w,2],v[i,3])
+          code_a = code[,-c(1)]  ## drops useless rows
+          taxonomy = code_a
+          taxonomy = toString(c(t(taxonomy)))
+          tag_code[i] = taxonomy
+        }}  ## Tag Code evaluation function
+      tag_code = as.data.frame(tag_code)
+      tag_code = t(tag_code)
+      print('Tags complete') ##Debugg
+      v = cbind(v,tag_code)  ## Joins tag code with Rest of Tag info
+      print('Tags + code bound') ##Debugg
+      v = v[,-c(1:3)]  ## Chops off containter info
+      v = sapply(v,FUN = as.character) ## Formatting
+      print('Sapply') ##Debugg
+      v = as.data.frame(v)  
+      print('Tags Finished') ##Debugg
+      ##  End of Tags  ##
+      s = as.data.frame(s)
+      triggerName = unlist(s$triggers.name) ## trigger names
+      triggerType = unlist(s$triggers.type) ## trigger type
+      firingTriggerId = unlist(s$triggers.triggerId) # trigger ID
+      s = cbind(triggerName,triggerType) ## binds them together
+      s = cbind(s,firingTriggerId) ## binds them together
+      print('Triggers Done') ##Debugg
+      u = merge(s,v, by = "firingTriggerId") ## Joining Triggers to tags
+      print('Full merge done') ##Debugg
+      as.data.frame(u)
+      ##print(merge(s,v, by = "firingTriggerId"))
+    }
+    ## ^ if statement to decide what to print
+  }) ## Outputs a data tabel of tags or triggers
+  ##downloadable <- reactive(print(Tag_list()))
+  
+  ## Outputs ##   
+  output$accounts <- renderUI({
+    req(access_token())
+    tagList(
+    selectInput('Accounts','Choose Account',
+                choices = account_list()[2],
+                ##list('Viewer','Multi Download','Audit') one day all of these will work
+                selected = NULL
+    ))
+  }) ## ouputs a dropdown for accounts
+  output$containers <- renderUI({
+    req(input$Accounts)
+    tagList(
+      selectInput('Containers','Choose Account',
+                  choices = container_list(),
+                  ##list('Viewer','Multi Download','Audit') one day all of these will work
+                  selected = NULL
+      )
+    )
+  }) ## outputs container dropdown
+  output$taglist <-renderDataTable({
+    Tag_list() 
+  })  ## ouputs tags to main panel
+  
+  ## Download function broken ##
+  output$downloadData <- downloadHandler(
+    filename = "report.csv",
+    content = function(file) {
+      write.csv(Tag_list(), file)
+    }
+  )
+}
